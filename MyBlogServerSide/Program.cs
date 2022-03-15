@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MyBlog.Data;
 using MyBlog.Data.Interfaces;
 using MyBlog.Data.Models;
+using MyBlog.Shared.Interfaces;
 using MyBlogServerSide.Authentication;
 using MyBlogServerSide.Data;
+using MyBlogServerSide.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,9 +29,20 @@ builder.Services.AddDbContext<MyBlogDbContext>(options =>
                         options.UseSqlite(builder.Configuration.GetConnectionString("MyBlogDB")));
 builder.Services.AddDefaultIdentity<AppUser>(options =>
                         options.SignIn.RequireConfirmedAccount=true)
+                //the server will send roles over the client
+                .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<MyBlogDbContext>();
 builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<AppUser>>();
 //<Authentication>
+
+//<BrowserStorage>
+builder.Services.AddScoped<IBrowserStorage, MyBlogProtectedBrowserStorage>();
+//<BrowserStorage>
+
+//<NotificationService>
+builder.Services.AddSingleton<IBlogNotificationService, BlazorServerBlogNotificationService > ();
+//<NotificationService>
+
 
 var app = builder.Build();
 

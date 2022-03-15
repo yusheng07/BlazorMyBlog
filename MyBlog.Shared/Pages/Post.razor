@@ -1,0 +1,61 @@
+﻿@page "/post/{BlogPostId:int}"
+@inject IMyBlogApi api
+@inject NavigationManager navman
+@inject IBlogNotificationService notificationService
+@using Markdig
+@using MyBlog.Shared.Interfaces
+@implements IDisposable
+
+@if (blogPost!=null)
+{
+    <Title Value="@blogPost.Title"></Title>
+
+    <PageTitle>@blogPost.Title</PageTitle>
+    <HeadContent>
+        <meta property="og:title" content="@blogPost.Title">
+        <meta property="og:description" content="@(new string(blogPost.Text.Take(100).ToArray()))" />
+        <meta property="og:image" content="@($"{navman.BaseUri}/pathtoanimage.png")" />
+        <meta property="og:url" content="@navman.Uri" />
+        <meta name="twitter:card" content="@(new string(blogPost.Text.Take(100).ToArray()))" />
+    </HeadContent>
+
+    <h3>@blogPost.Title</h3>
+    @*@((MarkupString)blogPost.Text)*@
+    @((MarkupString)Markdig.Markdown.ToHtml(blogPost.Text, Pipeline))
+}
+
+@code {
+    [Parameter]
+    public int blogPostId { get; set; }
+
+    public BlogPost blogPost { get; set; }
+
+    MarkdownPipeline Pipeline;
+
+    protected override Task OnInitializedAsync()
+    {
+        Pipeline = new MarkdownPipelineBuilder().UseEmojiAndSmiley().Build();
+        notificationService.BlogPostChanged += PostChanged;
+        return base.OnInitializedAsync();
+    }
+
+    protected async override Task OnParametersSetAsync()
+    {
+        blogPost = await api.GetBlogPostAsync(blogPostId);
+        await base.OnParametersSetAsync();
+    }
+
+    private async void PostChanged(BlogPost post)
+    {
+        if (blogPost.Id == post.Id)
+        {
+            blogPost = post;
+            await InvokeAsync(()=>this.StateHasChanged());
+        }
+    }
+
+    void IDisposable.Dispose() //stop listening to the updates by implementing the Dispose method
+    {
+        notificationService.BlogPostChanged -= PostChanged;
+    }
+}
